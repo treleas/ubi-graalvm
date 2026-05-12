@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.2
-FROM redhat/ubi9-minimal AS builder
+FROM redhat/ubi10-minimal:10.1 AS builder
 
 ARG TARGETARCH
 ARG GRAALVM_VERSION=25.0.3
@@ -25,7 +25,7 @@ RUN mkdir -p /mnt/rootfs/usr/lib64 /mnt/rootfs/usr/bin /mnt/rootfs/usr/sbin /mnt
     cp -a /usr/sbin/useradd /usr/sbin/groupadd -t /mnt/rootfs/usr/sbin/ && \
     cp -a /etc/passwd /etc/group /etc/shadow /etc/login.defs -t /mnt/rootfs/etc/
 
-FROM redhat/ubi9-micro
+FROM redhat/ubi10-micro:10.1
 
 ENV JAVA_HOME=/opt/java
 ENV PATH=$JAVA_HOME/bin:$PATH
