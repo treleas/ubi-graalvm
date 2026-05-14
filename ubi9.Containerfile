@@ -19,10 +19,17 @@ RUN rm -rf /opt/java/bin/native-image \
            /opt/java/man \
            /opt/java/jmods
 
-RUN microdnf install -y libstdc++ zlib gettext shadow-utils audit-libs libcap-ng pam libselinux libsemanage pcre2 libmount bzip2-libs
-RUN mkdir -p /mnt/rootfs/usr/lib64 /mnt/rootfs/usr/bin /mnt/rootfs/usr/sbin /mnt/rootfs/etc && \
-    cp -a /usr/lib64/libstdc++.so.6* /usr/lib64/libz.so.1* /usr/lib64/libgcc_s.so.1* /usr/lib64/libaudit.so.1* /usr/lib64/libcap-ng.so.0* /usr/lib64/libpam.so.0* /usr/lib64/libselinux.so.1* /usr/lib64/libsemanage.so.2* /usr/lib64/libpcre2-8.so.0* /usr/lib64/libmount.so.1* /usr/lib64/libblkid.so.1* /usr/lib64/libbz2.so.1* -t /mnt/rootfs/usr/lib64/ && \
+RUN microdnf install -y bash findutils gettext shadow-utils audit-libs zlib libxcrypt-compat
+RUN mkdir -p /mnt/rootfs/usr/lib64 /mnt/rootfs/usr/bin /mnt/rootfs/usr/sbin /mnt/rootfs/etc /mnt/rootfs/bin && \
+    cp -a /usr/bin/bash /usr/bin/sh /usr/bin/envsubst /usr/bin/find -t /mnt/rootfs/usr/bin/ && \
     cp -a /usr/sbin/useradd /usr/sbin/groupadd -t /mnt/rootfs/usr/sbin/ && \
+    for bin in /mnt/rootfs/usr/bin/* /mnt/rootfs/usr/sbin/*; do \
+        ldd "$bin" | grep -o '/usr/lib64/[^ ]*' | xargs -I {} cp -a {} /mnt/rootfs/usr/lib64/ 2>/dev/null || true; \
+        ldd "$bin" | grep -o '/lib64/[^ ]*' | xargs -I {} cp -a {} /mnt/rootfs/usr/lib64/ 2>/dev/null || true; \
+    done && \
+    cp -a /usr/lib64/libaudit.so.1* /usr/lib64/libz.so.1* /usr/lib64/libbz2.so.1* /usr/lib64/libcrypt.so.1* -t /mnt/rootfs/usr/lib64/ && \
+    ln -s /usr/bin/sh /mnt/rootfs/bin/sh && \
+    ln -s /usr/bin/bash /mnt/rootfs/bin/bash && \
     cp -a /etc/passwd /etc/group /etc/shadow /etc/login.defs -t /mnt/rootfs/etc/
 
 FROM redhat/ubi9-micro:9.7
@@ -30,5 +37,8 @@ FROM redhat/ubi9-micro:9.7
 ENV JAVA_HOME=/opt/java
 ENV PATH=$JAVA_HOME/bin:$PATH
 
-COPY --from=builder /mnt/rootfs /
+COPY --from=builder /mnt/rootfs/bin/ /bin/
+COPY --from=builder /mnt/rootfs/etc/ /etc/
+COPY --from=builder /mnt/rootfs/usr/ /usr/
+
 COPY --from=builder /opt/java /opt/java
